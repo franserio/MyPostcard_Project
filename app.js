@@ -1,6 +1,7 @@
 const urlAPI = "https://appdsapi-6aa0.kxcdn.com/content.php";
 const urlMPCServer = "https://www.mypostcard.com/mobile/product_prices.php";
 const maxRows = 25;
+const specialRow = 4;
 
 // setting = designCallRequestParameters - DONE
 let designsCallRequestParameters = {
@@ -73,10 +74,17 @@ function renderPrice(response, item) {
             .text("€ ")
             .append(
                 $("<span>")
-                    .text(
-                        parseFloat(response.products[0].price) +
-                            parseFloat(response.products[0].product_options.Envelope.price)
-                    )
+                    .text(function () {
+                        let priceWithEnvelope = 0;
+                        $.each(response.products, (_key, designType) => {
+                            if (designType.assignedtype === "Greetcard") {
+                                priceWithEnvelope =
+                                    parseFloat(designType.price) +
+                                    parseFloat(designType.product_options["Envelope"].price);
+                            }
+                        });
+                        return priceWithEnvelope;
+                    })
                     .addClass("price")
             )
             .addClass("align-middle"),
@@ -115,8 +123,7 @@ function renderPrice(response, item) {
 
                 // $select.append(renderOption("Only Folding Card", 0));
                 // $select.append(renderOption("Only Audio Card", 0));
-
-                $select.append(renderOption("Only Greeting Card", 0)).prop("selectedIndex", 2);
+                $select.prop("selectedIndex", 2);
                 // Add sort logic here (Greeting card with Envelope first)
                 return $select;
             })
@@ -135,7 +142,7 @@ let response = $.ajax({
                 renderTableContent(item);
                 fetchItem(item);
             }
-            $("tr:nth-of-type(4)").addClass("specialRow");
+            $(`tr:nth-of-type(${specialRow})`).addClass("special-row");
         });
     })
     .fail((_req, status, err) => {
@@ -147,9 +154,6 @@ $(document).ready(() => {
     $("#tableId").on("change", "select", function () {
         let value = $(this).val();
         let designId = $(this).parent().parent().attr("id");
-        // let content = response.responseJSON.content;
-        console.log(designId);
-        console.log(value);
         // New request with specific id (not for all)
         priceCallRequestParameters.store_id = designId;
         $.ajax({
@@ -170,12 +174,5 @@ $(document).ready(() => {
             .fail((_req, status, err) => {
                 console.log("Something went wrong", status, err);
             });
-
-        // Update price without AJAX call
-        // $.each(content, (_i, item) => {
-        //     if (item.id === designId) {
-        //         $(`#${designId} .price`).text(parseFloat(item.price) + parseFloat(value));
-        //     }
-        // });
     });
 });
