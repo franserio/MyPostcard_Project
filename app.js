@@ -2,8 +2,8 @@ const urlAPI = "https://appdsapi-6aa0.kxcdn.com/content.php";
 const urlMPCServer = "https://www.mypostcard.com/mobile/product_prices.php";
 const maxRows = 25;
 const specialRow = 4;
+let indexOptions = [];
 
-// setting = designCallRequestParameters - DONE
 let designsCallRequestParameters = {
     lang: "de",
     json: 1,
@@ -11,7 +11,6 @@ let designsCallRequestParameters = {
     currencyiso: "EUR",
 };
 
-// priceCallRequestParameters - DONE
 let priceCallRequestParameters = {
     json: 1,
     type: "get_postcard_products",
@@ -41,18 +40,9 @@ function renderTableContent(item) {
 function fetchItem(item) {
     $(function () {
         priceCallRequestParameters.store_id = item.id;
-        //Setup proxy server API request in order to solve CORS
-        // $.ajaxPrefilter((options) => {
-        //     if (options.crossDomain && jQuery.support.cors) {
-        //         let http = window.location.protocol === "http:" ? "http:" : "https:";
-        //         options.url = `${http}//cors-anywhere.herokuapp.com/${options.url}`;
-        //     }
-        // });
-        //Call to proxy server API with custom url
         $.ajax({
-            // method: "GET",
-            // Call proxy server API with custom request in order to solve CORS
-            url: `https://cors-anywhere.herokuapp.com/${urlMPCServer}`,
+            // Call proxy server API with custom url in order to solve CORS
+            url: `http://cors-anywhere.herokuapp.com/${urlMPCServer}`,
             data: priceCallRequestParameters,
         })
             .done((responseById) => {
@@ -74,7 +64,8 @@ function renderPrice(response, item) {
             .text("€ ")
             .append(
                 $("<span>")
-                    .text(function () {
+                    .text(() => {
+                        // Display default price
                         let priceWithEnvelope = 0;
                         $.each(response.products, (_key, designType) => {
                             if (designType.assignedtype === "Greetcard") {
@@ -90,17 +81,6 @@ function renderPrice(response, item) {
             .addClass("align-middle"),
         $("<td>")
             .append(() => {
-                // Options only for Greeting card
-                // options = response.products[0].product_options;
-                // let $select = $("<select></select>");
-                // $select.addClass("custom-select");
-                // $.each(options, (i, item) => {
-                //     $select.append($("<option>").text(i).attr({ value: item.price }));
-                // });
-
-                // Options for all products (greeting, folding and audio)
-                // TODO: display correct price default (folding and audio)
-                // TODO: create function for every append - DONE
                 options = response.products;
                 let $select = $("<select>");
                 $select.addClass("custom-select");
@@ -108,23 +88,27 @@ function renderPrice(response, item) {
                 $.each(options, (_key, product) => {
                     if (product.assignedtype === "Greetcard") {
                         $.each(product.product_options, (i, item) => {
+                            indexOptions.push(i);
                             $select.append(renderOption(`Greeting card - ${i}`, item.option_code));
                         });
+                        $select.append(renderOption("Only Greeting Card", product.assignedtype));
                     } else if (product.assignedtype === "Greetcard_Folding") {
                         $.each(product.product_options, (i, item) => {
+                            indexOptions.push(i);
                             $select.append(renderOption(`Folding card - ${i}`, item.option_code));
                         });
+                        $select.append(renderOption("Only Folding Card", product.assignedtype));
                     } else if (product.assignedtype === "Greetcard_Audio") {
                         $.each(product.product_options, (i, item) => {
+                            indexOptions.push(i);
                             $select.append(renderOption(`Audio card - ${i}`, item.option_code));
                         });
+                        $select.append(renderOption("Only Audio Card", product.assignedtype));
                     }
                 });
 
-                // $select.append(renderOption("Only Folding Card", 0));
-                // $select.append(renderOption("Only Audio Card", 0));
-                $select.prop("selectedIndex", 2);
-                // Add sort logic here (Greeting card with Envelope first)
+                $select.prop("selectedIndex", indexOptions.indexOf("Envelope"));
+                indexOptions = [];
                 return $select;
             })
             .addClass("align-middle")
@@ -132,7 +116,6 @@ function renderPrice(response, item) {
 }
 
 let response = $.ajax({
-    // method: "GET",
     url: urlAPI,
     data: designsCallRequestParameters,
 })
@@ -154,21 +137,24 @@ $(document).ready(() => {
     $("#tableId").on("change", "select", function () {
         let value = $(this).val();
         let designId = $(this).parent().parent().attr("id");
-        // New request with specific id (not for all)
+        // New request with specific id
         priceCallRequestParameters.store_id = designId;
         $.ajax({
             url: `https://cors-anywhere.herokuapp.com/${urlMPCServer}`,
             data: priceCallRequestParameters,
         })
             .done((response) => {
-                console.log(response);
                 let productsByDesign = response.products;
                 $.each(productsByDesign, (_i, item) => {
-                    $.each(item.product_options, (_key, addOnProduct) => {
-                        if (addOnProduct.option_code === value) {
-                            $(`#${designId} .price`).text(parseFloat(item.price) + parseFloat(addOnProduct.price));
-                        }
-                    });
+                    if (item.assignedtype === value) {
+                        $(`#${designId} .price`).text(parseFloat(item.price));
+                    } else {
+                        $.each(item.product_options, (_key, addOnProduct) => {
+                            if (addOnProduct.option_code === value) {
+                                $(`#${designId} .price`).text(parseFloat(item.price) + parseFloat(addOnProduct.price));
+                            }
+                        });
+                    }
                 });
             })
             .fail((_req, status, err) => {
