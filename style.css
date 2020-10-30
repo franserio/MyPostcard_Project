@@ -16,7 +16,7 @@ body {
     box-shadow: 0px 0px 35px rgba(0, 0, 0, 0.2);
 }
 
-.specialRow {
+.special-row {
     background-image: linear-gradient(to right, #a8edea 0%, #fed6e3 100%);
 }
 
