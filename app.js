@@ -19,34 +19,34 @@ let priceCallRequestParameters = {
 };
 
 // TODO: ver nombre item
-function renderTableContent(item) {
+function renderTableContent(postcardDesign) {
     $("#tableId").append(
         $("<tr>")
-            .attr("id", item.id)
+            .attr("id", postcardDesign.id)
             .append(
                 $("<td>")
                     .append(
                         $("<img>").addClass("img-thumbnail").attr({
-                            src: item.thumb_url,
-                            alt: item.alt_tag,
+                            src: postcardDesign.thumb_url,
+                            alt: postcardDesign.alt_tag,
                         })
                     )
                     .addClass("thumbnail"),
-                $("<td>").text(item.title).addClass("align-middle")
+                $("<td>").text(postcardDesign.title).addClass("align-middle")
             )
     );
 }
 
-function fetchItem(item) {
-    $(function () {
-        priceCallRequestParameters.store_id = item.id;
+function fetchItem(postcardDesign) {
+    $(() => {
+        priceCallRequestParameters.store_id = postcardDesign.id;
         $.ajax({
             // Call proxy server API with custom url in order to solve CORS
             url: `http://cors-anywhere.herokuapp.com/${urlMPCServer}`,
             data: priceCallRequestParameters,
         })
             .done((responseById) => {
-                renderPrice(responseById, item);
+                renderPrice(responseById, postcardDesign);
             })
             .fail((_req, status, err) => {
                 console.log("Something went wrong... ", status, err);
@@ -58,8 +58,8 @@ function renderOption(textToDisplay, value) {
     return $("<option>").text(textToDisplay).attr("value", value);
 }
 
-function renderPrice(response, item) {
-    $("#" + item.id).append(
+function renderPrice(responseById, postcardDesign) {
+    $("#" + postcardDesign.id).append(
         $("<td>")
             .text("€ ")
             .append(
@@ -67,7 +67,7 @@ function renderPrice(response, item) {
                     .text(() => {
                         // Display default price
                         let priceWithEnvelope = 0;
-                        $.each(response.products, (_key, designType) => {
+                        $.each(responseById.products, (_key, designType) => {
                             if (designType.assignedtype === "Greetcard") {
                                 priceWithEnvelope =
                                     parseFloat(designType.price) +
@@ -81,29 +81,29 @@ function renderPrice(response, item) {
             .addClass("align-middle"),
         $("<td>")
             .append(() => {
-                options = response.products;
+                postcardDesignTypes = responseById.products;
                 let $select = $("<select>");
                 $select.addClass("custom-select");
                 // TODO: variables names
-                $.each(options, (_key, product) => {
-                    if (product.assignedtype === "Greetcard") {
-                        $.each(product.product_options, (i, item) => {
-                            indexOptions.push(i);
-                            $select.append(renderOption(`Greeting card - ${i}`, item.option_code));
+                $.each(postcardDesignTypes, (_key, postcardDesignType) => {
+                    if (postcardDesignType.assignedtype === "Greetcard") {
+                        $.each(postcardDesignType.product_options, (indexAddOn, postcardAddOn) => {
+                            indexOptions.push(indexAddOn);
+                            $select.append(renderOption(`Greeting card - ${indexAddOn}`, postcardAddOn.option_code));
                         });
-                        $select.append(renderOption("Only Greeting Card", product.assignedtype));
-                    } else if (product.assignedtype === "Greetcard_Folding") {
-                        $.each(product.product_options, (i, item) => {
-                            indexOptions.push(i);
-                            $select.append(renderOption(`Folding card - ${i}`, item.option_code));
+                        $select.append(renderOption("Only Greeting Card", postcardDesignType.assignedtype));
+                    } else if (postcardDesignType.assignedtype === "Greetcard_Folding") {
+                        $.each(postcardDesignType.product_options, (indexAddOn, postcardAddOn) => {
+                            indexOptions.push(indexAddOn);
+                            $select.append(renderOption(`Folding card - ${indexAddOn}`, postcardAddOn.option_code));
                         });
-                        $select.append(renderOption("Only Folding Card", product.assignedtype));
-                    } else if (product.assignedtype === "Greetcard_Audio") {
-                        $.each(product.product_options, (i, item) => {
-                            indexOptions.push(i);
-                            $select.append(renderOption(`Audio card - ${i}`, item.option_code));
+                        $select.append(renderOption("Only Folding Card", postcardDesignType.assignedtype));
+                    } else if (postcardDesignType.assignedtype === "Greetcard_Audio") {
+                        $.each(postcardDesignType.product_options, (indexAddOn, postcardAddOn) => {
+                            indexOptions.push(indexAddOn);
+                            $select.append(renderOption(`Audio card - ${indexAddOn}`, postcardAddOn.option_code));
                         });
-                        $select.append(renderOption("Only Audio Card", product.assignedtype));
+                        $select.append(renderOption("Only Audio Card", postcardDesignType.assignedtype));
                     }
                 });
 
@@ -120,10 +120,10 @@ let response = $.ajax({
     data: designsCallRequestParameters,
 })
     .done((response) => {
-        $.each(response.content, (i, item) => {
-            if (i < maxRows) {
-                renderTableContent(item);
-                fetchItem(item);
+        $.each(response.content, (indexDesign, postcardDesign) => {
+            if (indexDesign < maxRows) {
+                renderTableContent(postcardDesign);
+                fetchItem(postcardDesign);
             }
             $(`tr:nth-of-type(${specialRow})`).addClass("special-row");
         });
@@ -143,15 +143,17 @@ $(document).ready(() => {
             url: `https://cors-anywhere.herokuapp.com/${urlMPCServer}`,
             data: priceCallRequestParameters,
         })
-            .done((response) => {
-                let productsByDesign = response.products;
-                $.each(productsByDesign, (_i, item) => {
-                    if (item.assignedtype === value) {
-                        $(`#${designId} .price`).text(parseFloat(item.price));
+            .done((responseById) => {
+                let postcardDesignTypes = responseById.products;
+                $.each(postcardDesignTypes, (_i, postcardDesignType) => {
+                    if (postcardDesignType.assignedtype === value) {
+                        $(`#${designId} .price`).text(parseFloat(postcardDesignType.price));
                     } else {
-                        $.each(item.product_options, (_key, addOnProduct) => {
+                        $.each(postcardDesignType.product_options, (_key, addOnProduct) => {
                             if (addOnProduct.option_code === value) {
-                                $(`#${designId} .price`).text(parseFloat(item.price) + parseFloat(addOnProduct.price));
+                                $(`#${designId} .price`).text(
+                                    parseFloat(postcardDesignType.price) + parseFloat(addOnProduct.price)
+                                );
                             }
                         });
                     }
