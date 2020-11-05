@@ -18,7 +18,6 @@ let priceCallRequestParameters = {
     store_id: "",
 };
 
-// TODO: ver nombre item
 function renderTableContent(postcardDesign) {
     $("#tableId").append(
         $("<tr>")
@@ -84,7 +83,7 @@ function renderPrice(responseById, postcardDesign) {
                 postcardDesignTypes = responseById.products;
                 let $select = $("<select>");
                 $select.addClass("custom-select");
-                // TODO: variables names
+
                 $.each(postcardDesignTypes, (_key, postcardDesignType) => {
                     if (postcardDesignType.assignedtype === "Greetcard") {
                         $.each(postcardDesignType.product_options, (indexAddOn, postcardAddOn) => {
@@ -115,24 +114,38 @@ function renderPrice(responseById, postcardDesign) {
     );
 }
 
-let response = $.ajax({
-    url: urlAPI,
-    data: designsCallRequestParameters,
-})
-    .done((response) => {
-        $.each(response.content, (indexDesign, postcardDesign) => {
-            if (indexDesign < maxRows) {
-                renderTableContent(postcardDesign);
-                fetchItem(postcardDesign);
-            }
-            $(`tr:nth-of-type(${specialRow})`).addClass("special-row");
-        });
+function makeResponse() {
+    let response = $.ajax({
+        url: urlAPI,
+        data: designsCallRequestParameters,
     })
-    .fail((_req, status, err) => {
-        console.log("Something went wrong", status, err);
-    });
+        .done((response) => {
+            $.each(response.content, (indexDesign, postcardDesign) => {
+                if (indexDesign < maxRows) {
+                    renderTableContent(postcardDesign);
+                    fetchItem(postcardDesign);
+                }
+                $(`tr:nth-of-type(${specialRow})`).addClass("special-row");
+            });
+        })
+        .fail((_req, status, err) => {
+            console.log("Something went wrong", status, err);
+        });
+}
+
+makeResponse();
 
 $(document).ready(() => {
+    // Search form event
+    $("#searchForm").on("submit", (e) => {
+        e.preventDefault();
+        $("#tableId tr").remove();
+        let searchInput = searchForm.elements.query.value;
+        designsCallRequestParameters.search_text = searchInput;
+        makeResponse();
+        searchInput = "";
+    });
+
     // Modify price when user select another option
     $("#tableId").on("change", "select", function () {
         let value = $(this).val();
